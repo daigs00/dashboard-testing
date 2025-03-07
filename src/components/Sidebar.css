@@ -1,0 +1,83 @@
+/* Sidebar.css */
+
+/* Main sidebar container */
+.sidebar {
+  height: 100vh;
+  background-color: rgba(0, 26, 105, 1); 
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+}
+
+/* Menu header styling */
+.menu-header {
+  padding: 15px 0;
+  text-align: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+.menu-header h2 {
+  color: #ffffff;
+  font-size: 1.9rem;
+  margin: 0;
+  font-weight: 500;
+}
+
+/* Menu items styling */
+.ps-menu-button {
+  padding: 15px 20px !important;
+  transition: all 0.2s ease;
+}
+
+.ps-menu-button:hover {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Icon styling in menu items */
+.ps-menu-icon {
+  color: #8aacc8 !important; /* Light blue for icons */
+  margin-right: 10px;
+}
+
+/* Text styling in menu items */
+.ps-menu-label {
+  color: #ffffff !important;
+  font-family: "JetBrains Mono", bold;
+  font-size: 1.5rem;
+}
+
+/* Active menu item styling */
+.ps-active {
+  background-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+.ps-active .ps-menu-icon {
+  color: #4fc3f7 !important; /* Brighter blue for active icon */
+}
+
+/* Custom scrollbar for the sidebar */
+.ps-sidebar-container::-webkit-scrollbar {
+  width: 5px;
+}
+
+.ps-sidebar-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.ps-sidebar-container::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.2);
+  border-radius: 20px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .sidebar {
+    position: fixed;
+    z-index: 999;
+  }
+  
+  .ps-sidebar-root.ps-collapsed {
+    width: 0 !important;
+    min-width: 0 !important;
+    overflow: hidden;
+  }
+}

@@ -3,12 +3,10 @@ body {
     font-family: "JetBrains-Mono";
     height: 100vh;
     background-image: url("./assets/frostfire.jpeg");
-   
     font-size: 24px;
 }
 .app {
-    background-image: url("./assets/frostfire.jpeg");
-    
+     
 }
 h1 {
     color: #165a72;
