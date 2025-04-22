@@ -13,7 +13,7 @@ export default function sensorDataPlugin() {
           
           // Map sensor types to file paths
           const sensorFiles = {
-            'smoke': '/home/capstone/logs/smoke.json',
+            'smoke': '/home/capstone/smoke.json',
             // Add other sensor types as needed
             // 'temperature': '/path/to/temperature.json',
             // 'humidity': '/path/to/humidity.json',
