@@ -46,36 +46,42 @@ const Dashboard = () => {
   // Use a ref to store the interval ID for cleanup
   const pollingInterval = useRef(null);
 
-  // Update smoke sensor data on component mount
+  // Update all sensor data on component mount
   useEffect(() => {
-    const updateSmokeSensorData = async () => {
+    const updateAllSensors = async () => {
       try {
-        const rawData = await fetchSensorData('smoke');
-        const latestReading = getLatestSensorReading(rawData);
+        // Create an array of promises for all sensor data fetches
+        const promises = [
+          fetchSensorData('temperature'),
+          fetchSensorData('humidity'),
+          fetchSensorData('smoke')
+        ];
         
-        setSensors(prev => 
-          prev.map(sensor => {
-            if (sensor.type === 'smoke') {
-              return {
-                ...sensor,
-                value: latestReading.value,
-                status: latestReading.status,
-                lastUpdated: latestReading.timestamp
-              };
-            }
-            return sensor;
-          })
-        );
+        // Wait for all promises to resolve
+        const results = await Promise.all(promises);
+        
+        // Update each sensor with its latest reading
+        setSensors(prev => prev.map((sensor, index) => {
+          const latestReading = getLatestSensorReading(results[index], sensor.type);
+          
+          return {
+            ...sensor,
+            value: latestReading.value,
+            unit: latestReading.unit || sensor.unit,
+            status: latestReading.status,
+            lastUpdated: latestReading.timestamp
+          };
+        }));
       } catch (error) {
-        console.error('Error updating smoke sensor data:', error);
+        console.error('Error updating sensor data:', error);
       }
     };
     
     // Initial data fetch
-    updateSmokeSensorData();
+    updateAllSensors();
     
     // Set up polling interval (every 15 seconds)
-    pollingInterval.current = setInterval(updateSmokeSensorData, 15000);
+    pollingInterval.current = setInterval(updateAllSensors, 15000);
     
     // Clean up interval on unmount
     return () => {
@@ -85,41 +91,60 @@ const Dashboard = () => {
     };
   }, []);
 
-  // Aggregated metrics - in a real implementation, these would be calculated 
-  // from the actual sensor data rather than hardcoded
-  const metrics = [
-    { id: 1, name: 'Average Temperature', value: '22.3°C', change: '+0.5°C', isUp: true, detailLink: '/analytics/temperature' },
-    { id: 2, name: 'Average Humidity', value: '42%', change: '-3%', isUp: false, detailLink: '/analytics/humidity' },
-    { id: 3, name: 'Smoke Level', value: '3.8 ppm', change: '-0.4 ppm', isUp: false, detailLink: '/analytics/smoke' },
-    { id: 4, name: 'Access Attempts (24h)', value: '16', change: '+2', isUp: true, detailLink: '/security/access' },
-    { id: 5, name: 'Failed Logins (24h)', value: '7', change: '+3', isUp: true, detailLink: '/security/auth' },
-    { id: 6, name: 'Door Status', value: 'Locked', change: 'Secure', isUp: false, detailLink: '/security/doors' }
-  ];
+  // Calculate metrics based on sensor data
+  const calculateMetrics = () => {
+    // Find temperature sensor
+    const tempSensor = sensors.find(s => s.type === 'temperature');
+    const tempValue = tempSensor ? tempSensor.value : 0;
+    const tempChange = '+0.5°C'; // In a real app, calculate this from historical data
+    
+    // Find humidity sensor
+    const humiditySensor = sensors.find(s => s.type === 'humidity');
+    const humidityValue = humiditySensor ? humiditySensor.value : 0;
+    const humidityChange = '-3%'; // In a real app, calculate this from historical data
+    
+    // Find smoke sensor
+    const smokeSensor = sensors.find(s => s.type === 'smoke');
+    const smokeValue = smokeSensor ? smokeSensor.value : 0;
+    const smokeChange = '-0.4 ppm'; // In a real app, calculate this from historical data
+    
+    return [
+      { id: 1, name: 'Average Temperature', value: `${tempValue.toFixed(1)}°C`, change: tempChange, isUp: true, detailLink: '/analytics/temperature' },
+      { id: 2, name: 'Average Humidity', value: `${humidityValue.toFixed(0)}%`, change: humidityChange, isUp: false, detailLink: '/analytics/humidity' },
+      { id: 3, name: 'Smoke Level', value: `${smokeValue.toFixed(1)} ppm`, change: smokeChange, isUp: false, detailLink: '/analytics/smoke' },
+      { id: 4, name: 'Access Attempts (24h)', value: '16', change: '+2', isUp: true, detailLink: '/security/access' },
+      { id: 5, name: 'Failed Logins (24h)', value: '7', change: '+3', isUp: true, detailLink: '/security/auth' },
+      { id: 6, name: 'Door Status', value: 'Locked', change: 'Secure', isUp: false, detailLink: '/security/doors' }
+    ];
+  };
 
   // Handle manual refresh of all data
   const handleRefresh = async () => {
     setIsRefreshing(true);
     
     try {
-      // Update smoke sensor data
-      const rawData = await fetchSensorData('smoke');
-      const latestReading = getLatestSensorReading(rawData);
+      // Create an array of promises for all sensor data fetches
+      const promises = [
+        fetchSensorData('temperature'),
+        fetchSensorData('humidity'),
+        fetchSensorData('smoke')
+      ];
       
-      setSensors(prev => 
-        prev.map(sensor => {
-          if (sensor.type === 'smoke') {
-            return {
-              ...sensor,
-              value: latestReading.value,
-              status: latestReading.status,
-              lastUpdated: latestReading.timestamp
-            };
-          }
-          return sensor;
-        })
-      );
+      // Wait for all promises to resolve
+      const results = await Promise.all(promises);
       
-      // Update other sensor data here as needed
+      // Update each sensor with its latest reading
+      setSensors(prev => prev.map((sensor, index) => {
+        const latestReading = getLatestSensorReading(results[index], sensor.type);
+        
+        return {
+          ...sensor,
+          value: latestReading.value,
+          unit: latestReading.unit || sensor.unit,
+          status: latestReading.status,
+          lastUpdated: latestReading.timestamp
+        };
+      }));
     } catch (error) {
       console.error('Error refreshing data:', error);
     } finally {
@@ -129,6 +154,9 @@ const Dashboard = () => {
       }, 500);
     }
   };
+
+  // Get current metrics
+  const metrics = calculateMetrics();
 
   return (
     <div className="space-y-6">

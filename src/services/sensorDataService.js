@@ -2,7 +2,7 @@ import axios from 'axios';
 
 /**
  * Fetches sensor data from the API endpoint
- * @param {string} sensorType - Type of sensor (e.g., 'smoke', 'temperature')
+ * @param {string} sensorType - Type of sensor (e.g., 'smoke', 'temperature', 'humidity')
  * @returns {Promise<Object>} - Promise that resolves to sensor data
  */
 export const fetchSensorData = async (sensorType) => {
@@ -16,12 +16,13 @@ export const fetchSensorData = async (sensorType) => {
 };
 
 /**
- * Processes raw smoke sensor data into a format suitable for charts
- * @param {Object} rawData - Raw data from the smoke sensor
+ * Processes sensor data based on type into a format suitable for charts
+ * @param {Object} rawData - Raw data from the sensor
+ * @param {string} sensorType - Type of sensor (e.g., 'smoke', 'temperature', 'humidity')
  * @param {string} timeRange - Time range to filter data ('day', 'week', 'month', 'year')
  * @returns {Array} - Processed data ready for charting
  */
-export const processSmokeSensorData = (rawData, timeRange = 'day') => {
+export const processSensorData = (rawData, sensorType, timeRange = 'day') => {
   if (!rawData || !rawData.readings || !Array.isArray(rawData.readings)) {
     return [];
   }
@@ -31,8 +32,26 @@ export const processSmokeSensorData = (rawData, timeRange = 'day') => {
     // Extract the first (and only) key-value pair from each reading
     const [value, timestamp] = Object.entries(reading)[0];
     
-    // Extract the numeric part from the value (remove 'ppm')
-    const numericValue = parseFloat(value.replace('ppm', ''));
+    // Extract the numeric part and unit from the value based on sensor type
+    let numericValue, unit;
+    
+    switch(sensorType) {
+      case 'temperature':
+        // Format: "43.7C"
+        numericValue = parseFloat(value.replace('C', ''));
+        unit = '°C';
+        break;
+      case 'humidity':
+        // Format: "13.6%"
+        numericValue = parseFloat(value.replace('%', ''));
+        unit = '%';
+        break;
+      case 'smoke':
+      default:
+        // Format: "807.17ppm"
+        numericValue = parseFloat(value.replace('ppm', ''));
+        unit = 'ppm';
+    }
     
     // Format the timestamp for display
     const dateObj = new Date(timestamp);
@@ -59,7 +78,8 @@ export const processSmokeSensorData = (rawData, timeRange = 'day') => {
     return {
       time: timestamp,
       formattedTime,
-      value: numericValue
+      value: numericValue,
+      unit
     };
   });
   
@@ -100,9 +120,10 @@ export const processSmokeSensorData = (rawData, timeRange = 'day') => {
 /**
  * Gets the latest value from sensor data
  * @param {Object} rawData - Raw sensor data
+ * @param {string} sensorType - Type of sensor (e.g., 'smoke', 'temperature', 'humidity')
  * @returns {Object} - Latest sensor reading with value and timestamp
  */
-export const getLatestSensorReading = (rawData) => {
+export const getLatestSensorReading = (rawData, sensorType) => {
   if (!rawData || !rawData.readings || !rawData.readings.length) {
     return { value: 0, timestamp: new Date().toISOString() };
   }
@@ -111,14 +132,38 @@ export const getLatestSensorReading = (rawData) => {
   const latestReading = rawData.readings[rawData.readings.length - 1];
   const [value, timestamp] = Object.entries(latestReading)[0];
   
-  // Extract numeric value
-  const numericValue = parseFloat(value.replace('ppm', ''));
+  // Extract numeric value and determine unit based on sensor type
+  let numericValue, unit, status;
+  
+  switch(sensorType) {
+    case 'temperature':
+      // Format: "43.7C"
+      numericValue = parseFloat(value.replace('C', ''));
+      unit = '°C';
+      // Determine status based on temperature value
+      status = numericValue < 35 ? 'normal' : numericValue < 40 ? 'warning' : 'error';
+      break;
+    case 'humidity':
+      // Format: "13.6%"
+      numericValue = parseFloat(value.replace('%', ''));
+      unit = '%';
+      // Determine status based on humidity value
+      status = numericValue > 30 && numericValue < 70 ? 'normal' : 
+               numericValue > 20 && numericValue < 80 ? 'warning' : 'error';
+      break;
+    case 'smoke':
+    default:
+      // Format: "807.17ppm"
+      numericValue = parseFloat(value.replace('ppm', ''));
+      unit = 'ppm';
+      // Determine status based on smoke value
+      status = numericValue < 1000 ? 'normal' : numericValue < 1500 ? 'warning' : 'error';
+  }
   
   return {
     value: numericValue,
-    unit: 'ppm',
+    unit,
     timestamp,
-    // Determine status based on value
-    status: numericValue < 1000 ? 'normal' : numericValue < 1500 ? 'warning' : 'error'
+    status
   };
 };

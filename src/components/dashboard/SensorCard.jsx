@@ -51,19 +51,21 @@ const SensorCard = ({ sensor, viewType = 'grid' }) => {
   // Fetch latest sensor data
   useEffect(() => {
     const updateSensorData = async () => {
-      if (sensor.type === 'smoke') {
+      // Check that the sensor type is one we support
+      if (['temperature', 'humidity', 'smoke'].includes(sensor.type)) {
         try {
-          const rawData = await fetchSensorData('smoke');
-          const latestReading = getLatestSensorReading(rawData);
+          const rawData = await fetchSensorData(sensor.type);
+          const latestReading = getLatestSensorReading(rawData, sensor.type);
           
           setSensorData(prev => ({
             ...prev,
             value: latestReading.value,
+            unit: latestReading.unit || prev.unit,
             status: latestReading.status,
             lastUpdated: latestReading.timestamp
           }));
         } catch (error) {
-          console.error('Error updating sensor data:', error);
+          console.error(`Error updating ${sensor.type} sensor data:`, error);
         }
       }
     };
@@ -89,19 +91,20 @@ const SensorCard = ({ sensor, viewType = 'grid' }) => {
   const handleRefresh = async () => {
     setIsLoading(true);
     
-    if (sensor.type === 'smoke') {
+    if (['temperature', 'humidity', 'smoke'].includes(sensor.type)) {
       try {
-        const rawData = await fetchSensorData('smoke');
-        const latestReading = getLatestSensorReading(rawData);
+        const rawData = await fetchSensorData(sensor.type);
+        const latestReading = getLatestSensorReading(rawData, sensor.type);
         
         setSensorData(prev => ({
           ...prev,
           value: latestReading.value,
+          unit: latestReading.unit || prev.unit,
           status: latestReading.status,
           lastUpdated: latestReading.timestamp
         }));
       } catch (error) {
-        console.error('Error refreshing sensor data:', error);
+        console.error(`Error refreshing ${sensor.type} sensor data:`, error);
       }
     }
     

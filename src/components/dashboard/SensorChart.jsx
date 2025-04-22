@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { fetchSensorData, processSmokeSensorData } from '../../services/sensorDataService';
+import { fetchSensorData, processSensorData } from '../../services/sensorDataService';
 
 const SensorChart = ({ sensorId, sensorType, timeRange, unit }) => {
   const [data, setData] = useState([]);
@@ -19,15 +19,7 @@ const SensorChart = ({ sensorId, sensorType, timeRange, unit }) => {
         const rawData = await fetchSensorData(sensorType);
         
         // Process data based on sensor type
-        let processedData = [];
-        
-        if (sensorType === 'smoke') {
-          processedData = processSmokeSensorData(rawData, timeRange);
-        } else {
-          // Handle other sensor types as needed
-          // For now, just pass through the data
-          processedData = rawData?.readings || [];
-        }
+        const processedData = processSensorData(rawData, sensorType, timeRange);
         
         setData(processedData);
         setError(null);
