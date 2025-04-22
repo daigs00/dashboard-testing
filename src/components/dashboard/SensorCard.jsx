@@ -1,12 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Thermometer, Droplet, Wind, MapPin, Clock, ChevronDown, ChevronUp, Settings, RefreshCw } from 'lucide-react';
 import SensorChart from './SensorChart';
 import { format } from 'date-fns';
+import { fetchSensorData, getLatestSensorReading } from '../../services/sensorDataService';
 
 const SensorCard = ({ sensor, viewType = 'grid' }) => {
   const [timeRange, setTimeRange] = useState('day');
   const [expanded, setExpanded] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [sensorData, setSensorData] = useState(sensor);
+  
+  // Use a ref to store the interval ID for cleanup
+  const pollingInterval = useRef(null);
   
   // Icon mapping based on sensor type
   const iconMap = {
@@ -41,18 +46,68 @@ const SensorCard = ({ sensor, viewType = 'grid' }) => {
   };
   
   // Get the icon component based on type
-  const SensorIcon = iconMap[sensor.type] || Activity;
+  const SensorIcon = iconMap[sensor.type] || Wind;
+  
+  // Fetch latest sensor data
+  useEffect(() => {
+    const updateSensorData = async () => {
+      if (sensor.type === 'smoke') {
+        try {
+          const rawData = await fetchSensorData('smoke');
+          const latestReading = getLatestSensorReading(rawData);
+          
+          setSensorData(prev => ({
+            ...prev,
+            value: latestReading.value,
+            status: latestReading.status,
+            lastUpdated: latestReading.timestamp
+          }));
+        } catch (error) {
+          console.error('Error updating sensor data:', error);
+        }
+      }
+    };
+    
+    // Initial data fetch
+    updateSensorData();
+    
+    // Set up polling interval (every 10 seconds)
+    pollingInterval.current = setInterval(updateSensorData, 10000);
+    
+    // Clean up interval on unmount
+    return () => {
+      if (pollingInterval.current) {
+        clearInterval(pollingInterval.current);
+      }
+    };
+  }, [sensor.type]);
   
   // Format the last updated time
-  const lastUpdatedFormatted = format(new Date(sensor.lastUpdated), 'MMM d, h:mm a');
+  const lastUpdatedFormatted = format(new Date(sensorData.lastUpdated), 'MMM d, h:mm a');
   
   // Handle refresh data
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     setIsLoading(true);
-    // Simulate API call
+    
+    if (sensor.type === 'smoke') {
+      try {
+        const rawData = await fetchSensorData('smoke');
+        const latestReading = getLatestSensorReading(rawData);
+        
+        setSensorData(prev => ({
+          ...prev,
+          value: latestReading.value,
+          status: latestReading.status,
+          lastUpdated: latestReading.timestamp
+        }));
+      } catch (error) {
+        console.error('Error refreshing sensor data:', error);
+      }
+    }
+    
     setTimeout(() => {
       setIsLoading(false);
-    }, 1000);
+    }, 500);
   };
   
   if (viewType === 'list') {
@@ -63,23 +118,23 @@ const SensorCard = ({ sensor, viewType = 'grid' }) => {
           onClick={() => setExpanded(!expanded)}
         >
           <div className="flex items-center space-x-3">
-            <div className={`p-2 rounded-lg ${statusColors[sensor.status].bg} ${statusColors[sensor.status].icon} border ${statusColors[sensor.status].border}`}>
+            <div className={`p-2 rounded-lg ${statusColors[sensorData.status].bg} ${statusColors[sensorData.status].icon} border ${statusColors[sensorData.status].border}`}>
               <SensorIcon className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-medium text-white">{sensor.name}</h3>
+              <h3 className="font-medium text-white">{sensorData.name}</h3>
               <div className="flex items-center text-sm text-gray-400">
                 <MapPin className="w-3 h-3 mr-1" />
-                {sensor.location}
+                {sensorData.location}
               </div>
             </div>
           </div>
           
           <div className="flex items-center space-x-4">
             <div className="text-right">
-              <div className="text-lg font-semibold text-white">{sensor.value} {sensor.unit}</div>
-              <span className={`text-xs px-2 py-1 rounded-full ${statusColors[sensor.status].bg} ${statusColors[sensor.status].text} border ${statusColors[sensor.status].border}`}>
-                {sensor.status.charAt(0).toUpperCase() + sensor.status.slice(1)}
+              <div className="text-lg font-semibold text-white">{sensorData.value} {sensorData.unit}</div>
+              <span className={`text-xs px-2 py-1 rounded-full ${statusColors[sensorData.status].bg} ${statusColors[sensorData.status].text} border ${statusColors[sensorData.status].border}`}>
+                {sensorData.status.charAt(0).toUpperCase() + sensorData.status.slice(1)}
               </span>
             </div>
             {expanded ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
@@ -129,10 +184,10 @@ const SensorCard = ({ sensor, viewType = 'grid' }) => {
             
             <div className="h-48 bg-gray-800 bg-opacity-50 rounded-lg p-2 border border-gray-700">
               <SensorChart 
-                sensorId={sensor.id}
-                sensorType={sensor.type}
+                sensorId={sensorData.id}
+                sensorType={sensorData.type}
                 timeRange={timeRange}
-                unit={sensor.unit}
+                unit={sensorData.unit}
               />
             </div>
             
@@ -151,14 +206,14 @@ const SensorCard = ({ sensor, viewType = 'grid' }) => {
     <div className="bg-gray-900 bg-opacity-50 backdrop-filter backdrop-blur-lg rounded-xl shadow-glass border border-gray-800 overflow-hidden transition-all duration-300 hover:shadow-lg hover:border-gray-700">
       <div className="px-4 pt-4 flex justify-between items-start">
         <div className="flex items-center space-x-3">
-          <div className={`p-2 rounded-lg ${statusColors[sensor.status].bg} ${statusColors[sensor.status].icon} border ${statusColors[sensor.status].border}`}>
+          <div className={`p-2 rounded-lg ${statusColors[sensorData.status].bg} ${statusColors[sensorData.status].icon} border ${statusColors[sensorData.status].border}`}>
             <SensorIcon className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="font-medium text-white">{sensor.name}</h3>
+            <h3 className="font-medium text-white">{sensorData.name}</h3>
             <div className="flex items-center text-sm text-gray-400">
               <MapPin className="w-3 h-3 mr-1" />
-              {sensor.location}
+              {sensorData.location}
             </div>
           </div>
         </div>
@@ -177,9 +232,9 @@ const SensorCard = ({ sensor, viewType = 'grid' }) => {
       </div>
       
       <div className="px-4 py-3 flex items-center">
-        <div className="text-2xl font-bold text-white">{sensor.value} {sensor.unit}</div>
-        <span className={`ml-2 text-xs px-2 py-1 rounded-full ${statusColors[sensor.status].bg} ${statusColors[sensor.status].text} border ${statusColors[sensor.status].border}`}>
-          {sensor.status.charAt(0).toUpperCase() + sensor.status.slice(1)}
+        <div className="text-2xl font-bold text-white">{sensorData.value} {sensorData.unit}</div>
+        <span className={`ml-2 text-xs px-2 py-1 rounded-full ${statusColors[sensorData.status].bg} ${statusColors[sensorData.status].text} border ${statusColors[sensorData.status].border}`}>
+          {sensorData.status.charAt(0).toUpperCase() + sensorData.status.slice(1)}
         </span>
       </div>
       
@@ -202,10 +257,10 @@ const SensorCard = ({ sensor, viewType = 'grid' }) => {
         
         <div className="h-48 bg-gray-800 bg-opacity-50 rounded-lg p-2 border border-gray-700">
           <SensorChart 
-            sensorId={sensor.id}
-            sensorType={sensor.type}
+            sensorId={sensorData.id}
+            sensorType={sensorData.type}
             timeRange={timeRange}
-            unit={sensor.unit}
+            unit={sensorData.unit}
           />
         </div>
         

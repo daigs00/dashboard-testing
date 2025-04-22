@@ -1,126 +1,57 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { format, subDays, subMonths, subYears, parseISO } from 'date-fns';
+import { fetchSensorData, processSmokeSensorData } from '../../services/sensorDataService';
 
 const SensorChart = ({ sensorId, sensorType, timeRange, unit }) => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  // Use a ref to store the interval ID for cleanup
+  const pollingInterval = useRef(null);
   
   useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      
+    // Function to fetch data from the server
+    const fetchSensorDataFromServer = async () => {
       try {
-        // In a real app, fetch data from API based on sensorId and timeRange
-        // For now, generate some fake data based on the time range
+        setLoading(true);
         
-        const now = new Date();
-        let dataPoints = [];
-        let dateFormat = '';
+        // Fetch raw data from the server
+        const rawData = await fetchSensorData(sensorType);
         
-        // Generate mock data based on the time range
-        switch(timeRange) {
-          case 'day':
-            // 24 data points for a day (hourly)
-            dataPoints = Array.from({ length: 24 }, (_, i) => {
-              const time = new Date(now);
-              time.setHours(now.getHours() - (23 - i));
-              
-              return {
-                time: time.toISOString(),
-                value: generateValue(sensorType, i)
-              };
-            });
-            dateFormat = 'HH:mm';
-            break;
-            
-          case 'week':
-            // 7 data points for a week (daily)
-            dataPoints = Array.from({ length: 7 }, (_, i) => {
-              const date = subDays(now, 6 - i);
-              
-              return {
-                time: date.toISOString(),
-                value: generateValue(sensorType, i)
-              };
-            });
-            dateFormat = 'EEE';
-            break;
-            
-          case 'month':
-            // 30 data points for a month (daily)
-            dataPoints = Array.from({ length: 30 }, (_, i) => {
-              const date = subDays(now, 29 - i);
-              
-              return {
-                time: date.toISOString(),
-                value: generateValue(sensorType, i)
-              };
-            });
-            dateFormat = 'dd MMM';
-            break;
-            
-          case 'year':
-            // 12 data points for a year (monthly)
-            dataPoints = Array.from({ length: 12 }, (_, i) => {
-              const date = subMonths(now, 11 - i);
-              
-              return {
-                time: date.toISOString(),
-                value: generateValue(sensorType, i)
-              };
-            });
-            dateFormat = 'MMM';
-            break;
-            
-          default:
-            dateFormat = 'HH:mm';
-            break;
+        // Process data based on sensor type
+        let processedData = [];
+        
+        if (sensorType === 'smoke') {
+          processedData = processSmokeSensorData(rawData, timeRange);
+        } else {
+          // Handle other sensor types as needed
+          // For now, just pass through the data
+          processedData = rawData?.readings || [];
         }
         
-        // Format the data for the chart
-        const formattedData = dataPoints.map(point => ({
-          time: point.time,
-          formattedTime: format(parseISO(point.time), dateFormat),
-          value: point.value
-        }));
-        
-        setData(formattedData);
-      } catch (error) {
-        console.error('Error fetching sensor data:', error);
+        setData(processedData);
+        setError(null);
+      } catch (err) {
+        console.error('Error fetching sensor data:', err);
+        setError('Failed to load sensor data');
       } finally {
         setLoading(false);
       }
     };
     
-    fetchData();
+    // Initial data fetch
+    fetchSensorDataFromServer();
+    
+    // Set up polling interval (every 5 seconds)
+    pollingInterval.current = setInterval(fetchSensorDataFromServer, 5000);
+    
+    // Clean up interval on unmount or when dependencies change
+    return () => {
+      if (pollingInterval.current) {
+        clearInterval(pollingInterval.current);
+      }
+    };
   }, [sensorId, sensorType, timeRange]);
-  
-  // Helper function to generate realistic-looking sensor values
-  const generateValue = (type, index) => {
-    // Base value and variation by sensor type
-    const baseValues = {
-      temperature: 22,
-      humidity: 45,
-      smoke: 3.5
-    };
-    
-    const variations = {
-      temperature: 5,
-      humidity: 15,
-      smoke: 1.5
-    };
-    
-    // Generate a value with some randomness and a trend
-    const baseValue = baseValues[type] || 50;
-    const variation = variations[type] || 10;
-    
-    // Add some noise and a slight upward trend
-    const noise = (Math.random() - 0.5) * variation;
-    const trend = (index / 20) * variation;
-    
-    return +(baseValue + noise + trend).toFixed(1);
-  };
   
   // Get chart color based on sensor type
   const getChartGradient = () => {
@@ -134,10 +65,18 @@ const SensorChart = ({ sensorId, sensorType, timeRange, unit }) => {
   
   const gradientColors = getChartGradient();
   
-  if (loading) {
+  if (loading && data.length === 0) {
     return (
       <div className="flex h-full items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500"></div>
+      </div>
+    );
+  }
+  
+  if (error && data.length ===.0) {
+    return (
+      <div className="flex h-full items-center justify-center text-danger-400 text-sm">
+        <span>{error}</span>
       </div>
     );
   }

@@ -1,23 +1,22 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Grid, List, RefreshCw, Download, Filter, ChevronDown } from 'lucide-react';
 import SensorCard from '../components/dashboard/SensorCard';
 import MetricCard from '../components/dashboard/MetricCard';
 import RFIDAccessCard from '../components/security/RFIDAccessCard';
 import AuthMonitorCard from '../components/security/AuthMonitorCard';
+import { fetchSensorData, getLatestSensorReading } from '../services/sensorDataService';
 
 const Dashboard = () => {
   const [view, setView] = useState('grid'); // 'grid' or 'list'
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
-
-  // This would typically come from an API
-  const sensors = [
+  const [sensors, setSensors] = useState([
     { 
       id: 1, 
       name: 'Temperature Sensor', 
       type: 'temperature',
       location: 'Server Room',
-      value: 23.5,
+      value: 22.5,
       unit: '°C',
       status: 'normal',
       lastUpdated: new Date().toISOString()
@@ -42,10 +41,52 @@ const Dashboard = () => {
       status: 'normal',
       lastUpdated: new Date().toISOString()
     }
-  ];
- 
+  ]);
+  
+  // Use a ref to store the interval ID for cleanup
+  const pollingInterval = useRef(null);
 
-  // Aggregated metrics
+  // Update smoke sensor data on component mount
+  useEffect(() => {
+    const updateSmokeSensorData = async () => {
+      try {
+        const rawData = await fetchSensorData('smoke');
+        const latestReading = getLatestSensorReading(rawData);
+        
+        setSensors(prev => 
+          prev.map(sensor => {
+            if (sensor.type === 'smoke') {
+              return {
+                ...sensor,
+                value: latestReading.value,
+                status: latestReading.status,
+                lastUpdated: latestReading.timestamp
+              };
+            }
+            return sensor;
+          })
+        );
+      } catch (error) {
+        console.error('Error updating smoke sensor data:', error);
+      }
+    };
+    
+    // Initial data fetch
+    updateSmokeSensorData();
+    
+    // Set up polling interval (every 15 seconds)
+    pollingInterval.current = setInterval(updateSmokeSensorData, 15000);
+    
+    // Clean up interval on unmount
+    return () => {
+      if (pollingInterval.current) {
+        clearInterval(pollingInterval.current);
+      }
+    };
+  }, []);
+
+  // Aggregated metrics - in a real implementation, these would be calculated 
+  // from the actual sensor data rather than hardcoded
   const metrics = [
     { id: 1, name: 'Average Temperature', value: '22.3°C', change: '+0.5°C', isUp: true, detailLink: '/analytics/temperature' },
     { id: 2, name: 'Average Humidity', value: '42%', change: '-3%', isUp: false, detailLink: '/analytics/humidity' },
@@ -55,15 +96,38 @@ const Dashboard = () => {
     { id: 6, name: 'Door Status', value: 'Locked', change: 'Secure', isUp: false, detailLink: '/security/doors' }
   ];
 
-
-  const handleRefresh = () => {
+  // Handle manual refresh of all data
+  const handleRefresh = async () => {
     setIsRefreshing(true);
     
-    // Simulate data refresh
-    setTimeout(() => {
-      setIsRefreshing(false);
-      // Here you would fetch updated data
-    }, 1000);
+    try {
+      // Update smoke sensor data
+      const rawData = await fetchSensorData('smoke');
+      const latestReading = getLatestSensorReading(rawData);
+      
+      setSensors(prev => 
+        prev.map(sensor => {
+          if (sensor.type === 'smoke') {
+            return {
+              ...sensor,
+              value: latestReading.value,
+              status: latestReading.status,
+              lastUpdated: latestReading.timestamp
+            };
+          }
+          return sensor;
+        })
+      );
+      
+      // Update other sensor data here as needed
+    } catch (error) {
+      console.error('Error refreshing data:', error);
+    } finally {
+      // Add slight delay to make the loading state visible
+      setTimeout(() => {
+        setIsRefreshing(false);
+      }, 500);
+    }
   };
 
   return (
