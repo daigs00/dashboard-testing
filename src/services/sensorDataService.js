@@ -1,16 +1,13 @@
 import axios from 'axios';
 
-// Define the API base URL - adjust this to match your server location
-const API_BASE_URL = 'http://localhost:5000/api';
-
 /**
- * Fetches sensor data from the server
+ * Fetches sensor data from the API endpoint
  * @param {string} sensorType - Type of sensor (e.g., 'smoke', 'temperature')
  * @returns {Promise<Object>} - Promise that resolves to sensor data
  */
 export const fetchSensorData = async (sensorType) => {
   try {
-    const response = await axios.get(`${API_BASE_URL}/sensor/${sensorType}`);
+    const response = await axios.get(`/api/sensor/${sensorType}`);
     return response.data;
   } catch (error) {
     console.error(`Error fetching ${sensorType} sensor data:`, error);

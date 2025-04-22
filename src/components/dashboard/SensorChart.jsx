@@ -73,7 +73,7 @@ const SensorChart = ({ sensorId, sensorType, timeRange, unit }) => {
     );
   }
   
-  if (error && data.length ===.0) {
+  if (error && data.length === 0) {
     return (
       <div className="flex h-full items-center justify-center text-danger-400 text-sm">
         <span>{error}</span>
