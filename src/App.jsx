@@ -10,19 +10,12 @@ import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
 import ForgotPassword from './pages/auth/ForgotPassword';
 
-/**
- * Main application component
- * 
- * Sets up:
- * - React Router for navigation
- * - Authentication provider
- * - Route protection
- * - Main application layout structure
- */
-
 // Dashboard pages
 import Dashboard from './pages/Dashboard';
 import { Analytics, UserManagement, Settings, Profile } from './pages/StubPages';
+
+// Security pages
+import RFIDAccessHistory from './pages/security/RFIDAccessHistory';
 
 // Auth context
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -66,6 +59,9 @@ function App() {
               <Route path="users" element={<UserManagement />} />
               <Route path="settings" element={<Settings />} />
               <Route path="profile" element={<Profile />} />
+              
+              {/* Security routes */}
+              <Route path="security/rfid-access" element={<RFIDAccessHistory />} />
             </Route>
           </Routes>
         </Router>
