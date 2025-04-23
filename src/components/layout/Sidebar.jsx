@@ -1,15 +1,54 @@
 import React, { useState } from 'react';
-import { NavLink } from 'react-router-dom';
-import { Home, BarChart2, Users, Settings, AlertTriangle, Database, X, ChevronDown, ChevronRight } from 'lucide-react';
+import { NavLink, useLocation } from 'react-router-dom';
+import { 
+  Home, 
+  BarChart2, 
+  Users, 
+  Settings, 
+  AlertTriangle, 
+  Database, 
+  X, 
+  ChevronDown, 
+  ChevronRight,
+  Thermometer,
+  Droplet,
+  Wind,
+  Shield
+} from 'lucide-react';
 
 const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
-  // Navigation items - maintain original routes
+  const location = useLocation();
+  const [analyticsOpen, setAnalyticsOpen] = useState(
+    location.pathname.includes('/analytics')
+  );
+  
+  // Navigation items - now with nested items for Analytics
   const navigation = [
     { name: 'Dashboard', icon: Home, href: '/' },
-    { name: 'Analytics', icon: BarChart2, href: '/analytics' },
+    { 
+      name: 'Analytics', 
+      icon: BarChart2, 
+      href: '/analytics',
+      hasChildren: true,
+      children: [
+        { name: 'Temperature', icon: Thermometer, href: '/analytics/temperature' },
+        { name: 'Humidity', icon: Droplet, href: '/analytics/humidity' },
+        { name: 'Air Quality', icon: Wind, href: '/analytics/air-quality' },
+        { name: 'Access Control', icon: Shield, href: '/analytics/access-control' },
+      ]
+    },
     { name: 'User Management', icon: Users, href: '/users' },
     { name: 'Settings', icon: Settings, href: '/settings' },
   ];
+  
+  // Check if a menu item is active (including checking if any child is active)
+  const isItemActive = (item) => {
+    if (location.pathname === item.href) return true;
+    if (item.hasChildren && item.children) {
+      return item.children.some(child => location.pathname === child.href);
+    }
+    return false;
+  };
   
   return (
     <>
@@ -58,26 +97,86 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
           {/* Navigation */}
           <div className="mt-5 flex-1 h-0 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent">
             <nav className="px-2 space-y-1">
-              {navigation.map((item) => (
-                <NavLink
-                  key={item.name}
-                  to={item.href}
-                  className={({ isActive }) =>
-                    `group flex items-center px-2 py-2 text-sm font-medium rounded-lg transition-all duration-150 ${
-                      isActive
-                        ? 'bg-primary-900 bg-opacity-80 text-primary-200'
-                        : 'text-gray-300 hover:bg-gray-800 hover:bg-opacity-40 hover:text-white'
-                    }`
-                  }
-                >
-                  <item.icon
-                    className="mr-3 flex-shrink-0 h-5 w-5 transition-colors duration-150"
-                    aria-hidden="true"
-                  />
-                  <span className="hidden md:hidden lg:inline">{item.name}</span>
-                  <span className="inline lg:hidden md:inline">{item.name}</span>
-                </NavLink>
-              ))}
+              {navigation.map((item) => 
+                item.hasChildren ? (
+                  <div key={item.name}>
+                    {/* Parent menu with dropdown */}
+                    <button
+                      className={`group w-full flex items-center px-2 py-2 text-sm font-medium rounded-lg transition-all duration-150 ${
+                        isItemActive(item)
+                          ? 'bg-primary-900 bg-opacity-80 text-primary-200'
+                          : 'text-gray-300 hover:bg-gray-800 hover:bg-opacity-40 hover:text-white'
+                      }`}
+                      onClick={() => setAnalyticsOpen(!analyticsOpen)}
+                    >
+                      <item.icon
+                        className="mr-3 flex-shrink-0 h-5 w-5 transition-colors duration-150"
+                        aria-hidden="true"
+                      />
+                      <span className="flex-1 text-left">{item.name}</span>
+                      {analyticsOpen ? (
+                        <ChevronDown className="h-4 w-4 text-gray-400" />
+                      ) : (
+                        <ChevronRight className="h-4 w-4 text-gray-400" />
+                      )}
+                    </button>
+                    
+                    {/* Dropdown children */}
+                    {analyticsOpen && (
+                      <div className="mt-1 space-y-1 pl-3">
+                        {item.children.map((child) => (
+                          <NavLink
+                            key={child.name}
+                            to={child.href}
+                            className={({ isActive }) =>
+                              `group flex items-center pl-8 pr-2 py-2 text-sm font-medium rounded-lg transition-all duration-150 ${
+                                isActive
+                                  ? 'bg-primary-900 bg-opacity-60 text-primary-200'
+                                  : 'text-gray-400 hover:bg-gray-800 hover:bg-opacity-30 hover:text-white'
+                              }`
+                            }
+                            onClick={() => {
+                              if (window.innerWidth < 1024) {
+                                setSidebarOpen(false);
+                              }
+                            }}
+                          >
+                            <child.icon
+                              className="mr-3 flex-shrink-0 h-4 w-4 transition-colors duration-150"
+                              aria-hidden="true"
+                            />
+                            <span>{child.name}</span>
+                          </NavLink>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <NavLink
+                    key={item.name}
+                    to={item.href}
+                    className={({ isActive }) =>
+                      `group flex items-center px-2 py-2 text-sm font-medium rounded-lg transition-all duration-150 ${
+                        isActive
+                          ? 'bg-primary-900 bg-opacity-80 text-primary-200'
+                          : 'text-gray-300 hover:bg-gray-800 hover:bg-opacity-40 hover:text-white'
+                      }`
+                    }
+                    onClick={() => {
+                      if (window.innerWidth < 1024) {
+                        setSidebarOpen(false);
+                      }
+                    }}
+                  >
+                    <item.icon
+                      className="mr-3 flex-shrink-0 h-5 w-5 transition-colors duration-150"
+                      aria-hidden="true"
+                    />
+                    <span className="hidden md:hidden lg:inline">{item.name}</span>
+                    <span className="inline lg:hidden md:inline">{item.name}</span>
+                  </NavLink>
+                )
+              )}
             </nav>
           </div>
           
