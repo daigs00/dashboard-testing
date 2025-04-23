@@ -49,48 +49,6 @@ export default function sensorDataPlugin() {
               res.end(JSON.stringify({ error: `Failed to parse ${sensorType} data` }));
             }
           });
-        } 
-        // Handle RFID access logs
-        else if (req.url === '/api/security/rfid-logs') {
-          // Path to the server log file
-          const logFilePath = '/home/capstone/server.log';
-          
-          // Read the file
-          fs.readFile(logFilePath, 'utf8', (err, data) => {
-            if (err) {
-              console.error('Error reading RFID access logs:', err);
-              
-              // For development, provide mock data if the file can't be read
-              if (err.code === 'ENOENT') {
-                const mockLogData = `2025-04-23 02:21:19,402 - INFO - Using Wi-Fi interface: wlp5s0
-2025-04-23 02:21:19,403 - INFO - Generated hostapd configuration at /tmp/hostapd.conf
-2025-04-23 02:21:19,403 - INFO - Generated dnsmasq configuration at /tmp/dnsmasq.conf 
-2025-04-23 02:21:47,489 - INFO - Received: AUTH:83151058:1111
-2025-04-23 02:21:47,489 - INFO - Access Granted
-2025-04-23 02:21:47,489 - INFO - Connection closed
-2025-04-23 02:22:01,887 - INFO - Received: AUTH:83151058:0000
-2025-04-23 02:22:01,887 - INFO - Access denied
-2025-04-23 02:22:01,887 - INFO - Connection closed
-2025-04-23 02:22:12,092 - INFO - Received: AUTH:83151058:1111
-2025-04-23 02:22:12,092 - INFO - Access Granted
-2025-04-23 02:22:12,092 - INFO - Connection closed`;
-                
-                res.setHeader('Content-Type', 'text/plain');
-                res.statusCode = 200;
-                res.end(mockLogData);
-                return;
-              }
-              
-              res.statusCode = 500;
-              res.end(JSON.stringify({ error: 'Failed to read RFID access logs' }));
-              return;
-            }
-            
-            // Set headers
-            res.setHeader('Content-Type', 'text/plain');
-            res.statusCode = 200;
-            res.end(data);
-          });
         } else {
           next();
         }
