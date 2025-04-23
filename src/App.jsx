@@ -12,11 +12,15 @@ import ForgotPassword from './pages/auth/ForgotPassword';
 
 // Dashboard pages
 import Dashboard from './pages/Dashboard';
-import { Analytics, UserManagement, Settings, Profile } from './pages/StubPages';
-
+import { UserManagement, Settings, Profile } from './pages/StubPages';
 // Security pages
 import RFIDAccessHistory from './pages/security/RFIDAccessHistory';
 
+// Analytics Pages
+import TemperatureAnalytics from './pages/analytics/TemperatureAnalytics';
+import HumidityAnalytics from './pages/analytics/HumidityAnalytics';
+import AirQualityAnalytics from './pages/analytics/AirQualityAnalytics';
+import AccessControlAnalytics from './pages/analytics/AccessControlAnalytics';
 // Auth context
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 
